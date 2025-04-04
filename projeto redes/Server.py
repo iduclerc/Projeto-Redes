@@ -35,9 +35,12 @@ def start_server(host='localhost', port=5050):
 
         while "#" in buffer:
             pacote, buffer = buffer.split("#", 1)
-            print(f"[Servidor] Pacote recebido: {pacote}")
+            print(f"[Server] Pacote recebido: {pacote}")
             mensagem_reconstruida += pacote
             pacotes_recebidos += 1
+
+            if modo_operacao == "individual":
+                conn.send("OK".encode())
 
             if pacotes_recebidos >= num_pacotes:
                 break
@@ -48,4 +51,4 @@ def start_server(host='localhost', port=5050):
     server_socket.close()
 
 if __name__ == "__main__":
-    start_server()
+    start_server() 
