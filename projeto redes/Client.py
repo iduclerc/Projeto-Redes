@@ -19,7 +19,8 @@ def start_client(server_ip='localhost', port=5050):
 
     # Mensagem do usuário
     mensagem = input("[Client] Digite a mensagem para enviar ao servidor: ")
-
+    mensagem = mensagem[:int(tamanho_max)]  # corta a mensagem se exceder o limite
+    
     # Dividindo em pacotes de 3 caracteres
     pacotes = [mensagem[i:i+3] for i in range(0, len(mensagem), 3)]
     client_socket.send(str(len(pacotes)).encode())  # Envia quantidade de pacotes
