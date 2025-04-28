@@ -7,8 +7,8 @@ def start_client(server_ip='localhost', port=5050):
 
     # Handshake
     modo_operacao = input("[Client] Escolha o modo de operação (individual/lote): ").strip().lower()
-    tamanho_max = input("[Client] Defina o tamanho máximo da mensagem: ").strip()
-    
+    tamanho_max = int(input("[Client] Defina o tamanho máximo de caracteres por pacote: ").strip())
+
     handshake = f"{modo_operacao}|{tamanho_max}"
     client_socket.send(handshake.encode())
     print(f"[Client] Handshake enviado: {handshake}")
@@ -18,14 +18,10 @@ def start_client(server_ip='localhost', port=5050):
 
     # Entrada da mensagem
     mensagem = input("[Client] Digite a mensagem para enviar ao servidor: ")
-    mensagem = mensagem[:int(tamanho_max)]
     print(f"[Client] Mensagem ajustada para envio: '{mensagem}'")
 
-    # Divisão dos pacotes
-    if modo_operacao == "lote":
-        pacotes = [mensagem[i:i+3] for i in range(0, len(mensagem), 3)]
-    else:  # modo individual
-        pacotes = list(mensagem)  # envia um caractere por vez
+    # Divisão dos pacotes (modo não muda a divisão)
+    pacotes = [mensagem[i:i+tamanho_max] for i in range(0, len(mensagem), tamanho_max)]
 
     client_socket.send(str(len(pacotes)).encode())  # Envia a quantidade de pacotes
 
@@ -39,7 +35,7 @@ def start_client(server_ip='localhost', port=5050):
         confirmacao = client_socket.recv(1024).decode()
         print(f"[Client] Metadado de confirmação → Pacote #{idx+1}, Conteúdo: '{pacote}', Tipo: {confirmacao}")
 
-        # Delay entre pacotes apenas no modo individual
+        # Delay apenas no modo individual
         if modo_operacao == "individual":
             time.sleep(0.5)
 

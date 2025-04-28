@@ -14,6 +14,7 @@ def start_server(host='localhost', port=5050):
     print(f"[Server] Handshake recebido: {handshake_data}")
     print(f"[Server] Modo de operação: {modo_operacao}")
     print(f"[Server] Tamanho máximo permitido: {tamanho_max}")
+
     conn.send("Handshake OK".encode())
 
     num_pacotes = int(conn.recv(1024).decode())
@@ -23,21 +24,30 @@ def start_server(host='localhost', port=5050):
     buffer = ""
     pacotes_recebidos = 0
 
-    while pacotes_recebidos < num_pacotes:
-        dados = conn.recv(1024).decode()
-        buffer += dados
+    conn.settimeout(2)  
+    
+    try:
+        while pacotes_recebidos < num_pacotes:
+            try:
+                dados = conn.recv(1024).decode()
+                if not dados:
+                    continue
+                buffer += dados
 
-        while "#" in buffer:
-            pacote, buffer = buffer.split("#", 1)
-            print(f"[Server] Pacote recebido: {pacote}")
-            mensagem_reconstruida += pacote
-            pacotes_recebidos += 1
+                while "#" in buffer:
+                    pacote, buffer = buffer.split("#", 1)
+                    print(f"[Server] Pacote recebido: {pacote}")
+                    mensagem_reconstruida += pacote
+                    pacotes_recebidos += 1
 
-            
-            conn.send("ACK".encode())
+                    conn.send("ACK".encode())
 
-            if pacotes_recebidos >= num_pacotes:
-                break
+                    if pacotes_recebidos >= num_pacotes:
+                        break
+            except socket.timeout:
+                continue  # Se passar 2s sem dados, tenta novamente
+    except Exception as e:
+        print(f"[Server] Erro durante a recepção: {e}")
 
     print(f"[Server] Mensagem completa recebida: {mensagem_reconstruida}")
     conn.close()
