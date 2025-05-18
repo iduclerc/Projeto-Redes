@@ -6,6 +6,8 @@ def calcular_checksum(texto):
 
 def start_client(server_ip='localhost', port=5050):
     TIMEOUT_SEGUNDOS = 2
+    janela = 1  # inicia com janela de 1 pacote
+    max_janela = 5
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((server_ip, port))
@@ -39,13 +41,20 @@ def start_client(server_ip='localhost', port=5050):
         pacote = pacotes[idx]
         tentativas[seq_num] = tentativas.get(seq_num, 0) + 1
 
+        print(f"[Janela] Tamanho atual da janela: {janela}")
+
+        if tentativas[seq_num] > janela:
+            print(f"[Janela] Pacote {seq_num} excede janela atual, aguardando ajuste.")
+            time.sleep(TIMEOUT_SEGUNDOS)
+            continue
+
         if seq_num == perda_idx and tentativas[seq_num] == 1:
             print(f"[Client] (Simulando perda) Pacote #{seq_num} não enviado (aguardando timeout para reenvio).")
-            pacote_enviado = pacote  # necessário para reenvio posterior
+            pacote_enviado = pacote
             checksum = calcular_checksum(pacote_enviado)
             pacote_formatado = f"SEQ:{seq_num}|{pacote_enviado}|CHK:{checksum}#"
             pacotes_enviados[seq_num] = pacote_formatado
-            time.sleep(TIMEOUT_SEGUNDOS + 0.1)  # aguarda timeout
+            time.sleep(TIMEOUT_SEGUNDOS + 0.1)
             continue
 
         if seq_num == erro_idx and tentativas[seq_num] == 1:
@@ -69,14 +78,17 @@ def start_client(server_ip='localhost', port=5050):
                 confirmacao = client_socket.recv(1024).decode()
                 print(f"[Client] Confirmação recebida: {confirmacao}")
             except socket.timeout:
-                print(f"[Client] Timeout esperando ACK do pacote {seq_num}, reenviando...")
+                print(f"[Client] Timeout esperando ACK do pacote {seq_num}, diminuindo janela.")
+                janela = max(1, janela // 2)  # reduz janela pela metade, mínimo 1
                 continue
 
             if confirmacao.startswith("ACK") and int(confirmacao.split()[1]) == seq_num:
                 idx += 1
+                janela = min(max_janela, janela + 1)  # aumenta janela até limite
                 break
             elif confirmacao.startswith("NACK"):
-                print(f"[Client] NACK recebido para pacote {seq_num}, reenviando com conteúdo original.")
+                print(f"[Client] NACK recebido para pacote {seq_num}, reenviando com conteúdo original e diminuindo janela.")
+                janela = max(1, janela // 2)
                 pacote_enviado = pacotes[seq_num - 1]
                 checksum = calcular_checksum(pacote_enviado)
                 pacote_formatado = f"SEQ:{seq_num}|{pacote_enviado}|CHK:{checksum}#"
